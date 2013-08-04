@@ -1,0 +1,2 @@
+rm pimenu.zip
+zip pimenu.zip pimenu pimenu.cfg ICON[012].bmp install.sh readme.txt 
