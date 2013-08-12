@@ -42,6 +42,9 @@ The "kioskmode" can be set to "1" to stop the menu quitting.
 
 *CHANGE LOG*
 
+_August 12, 2013:_
+  * Change to the executable directory before executing binary.
+
 _August 5, 2013:_
   * Initial release.
 

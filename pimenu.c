@@ -181,14 +181,26 @@ void init_title(void)
 
 void ss_prog_run(void)
 {
+	char cwd_dir[1000];
+	char curr_dir[1000];
 
 	//Close down all displays and SDL Input so game has full control
  	dispmanx_deinit();	
 	SDL_JoystickClose(0);
     SDL_Quit();
 
+    //Set the cwd directory to where the binary is
+    realpath(icon_commands[current_icon], curr_dir);
+    char *dirsep = strrchr(curr_dir, '/');
+    if( dirsep != 0 ) *dirsep = 0;
+
+	getcwd(cwd_dir, 999);	
+	chdir(curr_dir);
+
 	//Run Program and wait
 	system(icon_commands[current_icon]);
+
+	chdir(cwd_dir);
 
 }
 
