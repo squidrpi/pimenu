@@ -1,0 +1,30 @@
+[Keyboard]
+# Get codes from /usr/include/SDL/SDL_keysym.h
+A_1=306
+START_1=13
+SELECT_1=9
+LEFT_1=276
+RIGHT_1=275
+UP_1=273
+DOWN_1=274
+QUIT=27
+
+[Joystick]
+# Get codes from "jstest /dev/input/js0"
+# from package "joystick"
+A_1=0
+START_1=9
+SELECT_1=8
+#Joystick axis
+JA_LR=0
+JA_UD=1
+
+[General]
+#Exit the program on quit? 0 yes, 1 no
+kioskmode=0
+#icon_count must match number of commands here.
+#There must also be corresponding ICON[012...].bmp files in pimenu directory
+icon_count=3
+icon_command_0=/usr/local/bin/indiecity/InstalledApps/mame4all_pi/Full/mame
+icon_command_1=/usr/local/bin/indiecity/InstalledApps/pisnes/Full/snes9x.gui
+icon_command_2=/usr/local/bin/indiecity/InstalledApps/pifba/Full/fbacapex
