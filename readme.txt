@@ -15,11 +15,9 @@ All controls are configurable by editing the "pimenu.cfg" file.
 
 
 INSTALLATION
-{{{
 pimenu        -> Game binary
 pimenu.cfg    -> configuration file
 ICON[012].bmp -> Default ICONs used for the game emulators
-}}}
 
 To run PiMenu simple run the "pimenu" executable. 
 
