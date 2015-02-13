@@ -26,5 +26,8 @@ kioskmode=0
 #There must also be corresponding ICON[012...].bmp files in pimenu directory
 icon_count=3
 icon_command_0=/usr/local/bin/indiecity/InstalledApps/mame4all_pi/Full/mame
+icon_args_0=
 icon_command_1=/usr/local/bin/indiecity/InstalledApps/pisnes/Full/snes9x.gui
+icon_args_1=
 icon_command_2=/usr/local/bin/indiecity/InstalledApps/pifba/Full/fbacapex
+icon_args_2=

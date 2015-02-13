@@ -78,7 +78,14 @@ int middle_position=0;
 int icon_posx[20];
 
 char icon_commands[MAXICONS][1000];
+char icon_args[MAXICONS][1000];
 char tmp_icon_commands[MAXICONS][1000];
+char tmp_icon_args[MAXICONS][1000];
+
+uint32_t display_width=0, display_height=0;
+
+int zoomspeed=4;
+int zoom=1;
 
 char abspath[1000];
 
@@ -172,6 +179,7 @@ void init_title(void)
 			SDL_FreeSurface(tmp_icon);
 
 			strcpy(icon_commands[num_icons], tmp_icon_commands[i]);
+			strcpy(icon_args[num_icons], tmp_icon_args[i]);
 
 			num_icons++;
 
@@ -183,6 +191,7 @@ void ss_prog_run(void)
 {
 	char cwd_dir[1000];
 	char curr_dir[1000];
+	char runcmd[2000];
 
 	//Close down all displays and SDL Input so game has full control
  	dispmanx_deinit();	
@@ -197,8 +206,14 @@ void ss_prog_run(void)
 	getcwd(cwd_dir, 999);	
 	chdir(curr_dir);
 
+	strcpy(runcmd, icon_commands[current_icon]);
+	if(strlen(icon_args[current_icon]) > 0) {
+		strcat(runcmd, " ");
+ 		strcat(runcmd, icon_args[current_icon]);
+	}
+
 	//Run Program and wait
-	system(icon_commands[current_icon]);
+	system(runcmd);
 
 	chdir(cwd_dir);
 
@@ -252,6 +267,12 @@ void pi_initialise()
 		strcpy(tmp_icon_commands[i], "");
 		if(tempptr)
 			strcpy(tmp_icon_commands[i], tempptr);
+
+		sprintf(tmpstr, "icon_args_%d", i);
+		tempptr = get_string_conf("General", tmpstr);
+		strcpy(tmp_icon_args[i], "");
+		if(tempptr)
+			strcpy(tmp_icon_args[i], tempptr);
 	}
 		
     close_config_file();
@@ -352,6 +373,7 @@ int main(int argc, char *argv[])
 
 	            usleep(10000);
 	            
+			dispmanx_display();
 	        }
 	        
 	        if (Joypads & GP2X_RIGHT && next_icon == current_icon) {
@@ -366,6 +388,8 @@ int main(int argc, char *argv[])
 	
 			if(!options.kiosk_mode) {
 				if (Joypads & GP2X_SELECT || Joypads & GP2X_ESCAPE) {
+					zoomspeed=-zoomspeed*2;
+					while(zoom > 1) dispmanx_display();
 					exit_prog();
 	           	 Quit=1;
 	        	}
@@ -491,7 +515,6 @@ static void dispmanx_init(void)
     int ret;
 	int i;
     uint32_t crap;
-    uint32_t display_width=0, display_height=0;
     VC_RECT_T dst_rect;
     VC_RECT_T src_rect;
 
@@ -536,7 +559,7 @@ static void dispmanx_init(void)
 
     // draw icons to screen
 	for(i=0;i<num_icons;i++) {
-		vc_dispmanx_rect_set( &dst_rect, icon_posx[i], posy, iconsize, iconsize);
+		vc_dispmanx_rect_set( &dst_rect, icon_posx[i], posy, 1, 1);
     	dx_element[i] = vc_dispmanx_element_add(  dx_update,
 							dx_display, 2, &dst_rect, dx_icon[i], &src_rect,
 							DISPMANX_PROTECTION_NONE, &alpha, 0, (DISPMANX_TRANSFORM_T) 0 );
@@ -596,6 +619,11 @@ static void dispmanx_display(void)
 
 	vc_dispmanx_rect_set( &src_rect, 0, 0, 192 << 16, 192 << 16);
 
+	VC_DISPMANX_ALPHA_T alpha;
+	alpha.flags = DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS;
+	alpha.opacity = 255;
+	alpha.mask = 0; 
+
     // begin display update
     dx_update = vc_dispmanx_update_start( 0 );
 
@@ -603,10 +631,13 @@ static void dispmanx_display(void)
  	change_flags = ELEMENT_CHANGE_DEST_RECT;
 
 	for(i=0;i<num_icons;i++) {
-    	vc_dispmanx_rect_set( &dst_rect, icon_posx[i], posy, iconsize, iconsize );
+    	vc_dispmanx_rect_set( &dst_rect, icon_posx[i]+((iconsize-zoom)/2), posy+((iconsize-zoom)/2), zoom, zoom );
     	rc = vc_dispmanx_element_change_attributes(dx_update, dx_element[i], change_flags,
     		0, 0xff, &dst_rect, &src_rect, 0, (DISPMANX_TRANSFORM_T) 0 );
 	}
+
+	if(zoom <= iconsize) zoom+=(zoomspeed*scalesize);
+	if (zoom > iconsize) zoom=iconsize;
 
     vc_dispmanx_update_submit_sync( dx_update );
 }
