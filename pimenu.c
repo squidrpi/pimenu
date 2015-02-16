@@ -608,16 +608,23 @@ static void dispmanx_deinit(void)
 }
 
 
+#ifndef ELEMENT_CHANGE_LAYER
+/* copied from interface/vmcs_host/vc_vchi_dispmanx.h of userland.git */
+#define ELEMENT_CHANGE_LAYER          (1<<0)
+#define ELEMENT_CHANGE_OPACITY        (1<<1)
 #define ELEMENT_CHANGE_DEST_RECT      (1<<2)
+#define ELEMENT_CHANGE_SRC_RECT       (1<<3)
+#define ELEMENT_CHANGE_MASK_RESOURCE  (1<<4)
+#define ELEMENT_CHANGE_TRANSFORM      (1<<5)
+#endif
 
 static void dispmanx_display(void)
 {
 	int i;
+    int dst_x=0, dst_y=0;
 	int32_t rc;
     VC_RECT_T src_rect, dst_rect;
-	uint32_t change_flags;
 
-	vc_dispmanx_rect_set( &src_rect, 0, 0, 192 << 16, 192 << 16);
 
 	VC_DISPMANX_ALPHA_T alpha;
 	alpha.flags = DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS;
@@ -627,17 +634,37 @@ static void dispmanx_display(void)
     // begin display update
     dx_update = vc_dispmanx_update_start( 0 );
 
-	//Move the icons if required
- 	change_flags = ELEMENT_CHANGE_DEST_RECT;
+	//Move each icon as required, making sure no negative coordinates are used as
+    //this breaks dispmanx. 
+	for (i=0;i<num_icons;i++) {
 
-	for(i=0;i<num_icons;i++) {
-    	vc_dispmanx_rect_set( &dst_rect, icon_posx[i]+((iconsize-zoom)/2), posy+((iconsize-zoom)/2), zoom, zoom );
-    	rc = vc_dispmanx_element_change_attributes(dx_update, dx_element[i], change_flags,
-    		0, 0xff, &dst_rect, &src_rect, 0, (DISPMANX_TRANSFORM_T) 0 );
+		dst_x=icon_posx[i]+((iconsize-zoom)/2);
+		dst_y=posy+((iconsize-zoom)/2);
+
+		//If none of the icon is on the screen then shift off the right screen
+        //as dispmanx won't display when off the left completely.
+		if(dst_x < -zoom){
+  			dst_x = 3000;
+		}
+
+		vc_dispmanx_rect_set( &src_rect, 0, 0, 192 << 16, 192 << 16);
+    	//vc_dispmanx_rect_set( &dst_rect, icon_posx[i]+((iconsize-zoom)/2), posy+((iconsize-zoom)/2), zoom, zoom );
+    	vc_dispmanx_rect_set( &dst_rect, dst_x, dst_y, zoom, zoom );
+
+    	rc = vc_dispmanx_element_change_attributes(
+				dx_update, 
+				dx_element[i], 
+				ELEMENT_CHANGE_DEST_RECT,
+    			0, 
+				0xff, 
+				&dst_rect, 
+				&src_rect, 
+				0, 
+				(DISPMANX_TRANSFORM_T) 0 );
 	}
 
-	if(zoom <= iconsize) zoom+=(zoomspeed*scalesize);
-	if (zoom > iconsize) zoom=iconsize;
+	if (zoom <= iconsize) zoom += (zoomspeed*scalesize);
+	if (zoom > iconsize) zoom = iconsize;
 
     vc_dispmanx_update_submit_sync( dx_update );
 }
