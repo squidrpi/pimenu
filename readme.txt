@@ -43,6 +43,10 @@ PORT CREDITS
 
 CHANGE LOG
 
+February 18, 2015:
+  * Fixed corruption of icon going off the left of the screen.
+  * Controls default to XBOX360 Controller.
+
 August 24, 2013:
   * Added arguments option in the config file.
   * Added zoom on start/finish.
