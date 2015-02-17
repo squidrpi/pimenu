@@ -426,7 +426,7 @@ static void fe_ProcessEvents (void)
             case SDL_JOYBUTTONUP:
                 joy_buttons[event.jbutton.which][event.jbutton.button] = 0;
                 break;
-           case SDL_JOYAXISMOTION:
+            case SDL_JOYAXISMOTION:
                 if(event.jaxis.axis == joyaxis_LR) {
                     if(event.jaxis.value > -10000 && event.jaxis.value < 10000)
                         joy_axes[event.jbutton.which][joyaxis_LR] = CENTER;
@@ -444,6 +444,39 @@ static void fe_ProcessEvents (void)
                         joy_axes[event.jbutton.which][joyaxis_UD] = UP;
                 }
                 break;
+
+            case SDL_JOYHATMOTION:
+              switch(event.jhat.value) {
+              case SDL_HAT_CENTERED:
+                joy_axes[event.jbutton.which][joyaxis_LR] = CENTER;
+                joy_axes[event.jbutton.which][joyaxis_UD] = CENTER;
+                break;
+              case SDL_HAT_LEFT:
+                joy_axes[event.jbutton.which][joyaxis_LR] = LEFT;
+                joy_axes[event.jbutton.which][joyaxis_UD] = CENTER;
+                break;
+              case SDL_HAT_RIGHT:
+                joy_axes[event.jbutton.which][joyaxis_LR] = RIGHT;
+                joy_axes[event.jbutton.which][joyaxis_UD] = CENTER;
+                break;
+              case SDL_HAT_RIGHTUP:
+                joy_axes[event.jbutton.which][joyaxis_LR] = RIGHT;
+                joy_axes[event.jbutton.which][joyaxis_UD] = UP;
+                break;
+              case SDL_HAT_LEFTUP:
+                joy_axes[event.jbutton.which][joyaxis_LR] = LEFT;
+                joy_axes[event.jbutton.which][joyaxis_UD] = UP;
+                break;
+              case SDL_HAT_RIGHTDOWN:
+                joy_axes[event.jbutton.which][joyaxis_LR] = RIGHT;
+                joy_axes[event.jbutton.which][joyaxis_UD] = DOWN;
+                break;
+              case SDL_HAT_LEFTDOWN:
+                joy_axes[event.jbutton.which][joyaxis_LR] = LEFT;
+                joy_axes[event.jbutton.which][joyaxis_UD] = DOWN;
+                break;
+              }
+
             case SDL_KEYDOWN:
                 sdl_keys = SDL_GetKeyState(NULL);
                 break;
@@ -625,37 +658,29 @@ static void dispmanx_display(void)
 	int32_t rc;
     VC_RECT_T src_rect, dst_rect;
 
-
-	VC_DISPMANX_ALPHA_T alpha;
-	alpha.flags = DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS;
-	alpha.opacity = 255;
-	alpha.mask = 0; 
-
     // begin display update
     dx_update = vc_dispmanx_update_start( 0 );
 
-	//Move each icon as required, making sure no negative coordinates are used as
-    //this breaks dispmanx. 
+	//Move each icon as required
 	for (i=0;i<num_icons;i++) {
 
 		dst_x=icon_posx[i]+((iconsize-zoom)/2);
 		dst_y=posy+((iconsize-zoom)/2);
 
 		//If none of the icon is on the screen then shift off the right screen
-        //as dispmanx won't display when off the left completely.
+        //as dispmanx won't display it correctly when off the left completely.
 		if(dst_x < -zoom){
   			dst_x = 3000;
 		}
 
 		vc_dispmanx_rect_set( &src_rect, 0, 0, 192 << 16, 192 << 16);
-    	//vc_dispmanx_rect_set( &dst_rect, icon_posx[i]+((iconsize-zoom)/2), posy+((iconsize-zoom)/2), zoom, zoom );
     	vc_dispmanx_rect_set( &dst_rect, dst_x, dst_y, zoom, zoom );
 
     	rc = vc_dispmanx_element_change_attributes(
 				dx_update, 
 				dx_element[i], 
 				ELEMENT_CHANGE_DEST_RECT,
-    			0, 
+				0, 
 				0xff, 
 				&dst_rect, 
 				&src_rect, 
