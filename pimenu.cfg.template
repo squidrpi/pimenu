@@ -25,12 +25,14 @@ JA_UD=1
 kioskmode=0
 #icon_count must match number of commands here.
 #There must also be corresponding ICON[012...].bmp files in pimenu directory
-icon_count=4
-icon_command_0=/usr/local/bin/indiecity/InstalledApps/mame4all/Full/mame
+icon_count=5
+icon_command_0=/usr/local/bin/indiecity/InstalledApps/mame4all_pi/Full/mame
 icon_args_0=
 icon_command_1=/usr/local/bin/indiecity/InstalledApps/pisnes/Full/snes9x.gui
 icon_args_1=
-icon_command_2=/usr/local/bin/indiecity/InstalledApps/pi-fba/Full/fbacapex
+icon_command_2=/usr/local/bin/indiecity/InstalledApps/pifba/Full/fbacapex
 icon_args_2=
 icon_command_3=/usr/local/bin/indiecity/InstalledApps/rpi/Full/unreal_speccy_portable
 icon_args_3=
+icon_command_4=/usr/local/bin/indiecity/InstalledApps/atari800/Full/atari800
+icon_args_4=
