@@ -371,7 +371,8 @@ int main(int argc, char *argv[])
 	            //Used to delay the initial key press, but
 	            //once pressed and held the delay will clear
 
-	            usleep(10000);
+			//Commented out, can't remember what this does, but it jerks the opening animation
+	     //       usleep(10000);
 	            
 			dispmanx_display();
 	        }
