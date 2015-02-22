@@ -677,7 +677,7 @@ static void dispmanx_display(void)
 		vc_dispmanx_rect_set( &src_rect, 0, 0, 192 << 16, 192 << 16);
     	vc_dispmanx_rect_set( &dst_rect, dst_x, dst_y, zoom, zoom );
 
-		if(dst_x < -zoom){
+		if(dst_x <= -zoom){
     		vc_dispmanx_rect_set( &dst_rect, display_width+1, 0, 1, 1 );
 		}
 
