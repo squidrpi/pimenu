@@ -45,17 +45,12 @@ background. The following ImageMagick command creates the correct format:
 
 The "kioskmode" can be set to "1" to stop the menu quitting.
 
-PORT CREDITS
-------------
-  * Ported to Raspberry Pi by Squid.
-  * Based on the Dingoo SDL version of SNES9X v1.39
-
 CHANGE LOG
 ----------
 
 February 18, 2015:
 
-  * Fixed corruption of icon going off the left of the screen.
+  * Fixed corruption of icon (dispmanx bug) going off the left of the screen.
   * Controls default to XBOX360 Controller.
 
 August 24, 2013:
