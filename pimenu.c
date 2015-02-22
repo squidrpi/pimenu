@@ -670,12 +670,16 @@ static void dispmanx_display(void)
 
 		//If none of the icon is on the screen then shift off the right screen
         //as dispmanx won't display it correctly when off the left completely.
-		if(dst_x < -zoom){
-  			dst_x = 3000;
-		}
+//		if(dst_x < -zoom){
+//  			dst_x = 3000;
+//		}
 
 		vc_dispmanx_rect_set( &src_rect, 0, 0, 192 << 16, 192 << 16);
     	vc_dispmanx_rect_set( &dst_rect, dst_x, dst_y, zoom, zoom );
+
+		if(dst_x < -zoom){
+    		vc_dispmanx_rect_set( &dst_rect, display_width+1, 0, 1, 1 );
+		}
 
     	rc = vc_dispmanx_element_change_attributes(
 				dx_update, 
