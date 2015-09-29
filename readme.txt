@@ -43,10 +43,18 @@ background. The following ImageMagick command creates the correct format:
 
     convert ICON.png -resize 192x192 -compress none bmp3:ICON3.bmp
 
+You can run bash scripts, example here to poweroff the Pi:
+icon_command_3=sudo /sbin/reboot
+icon_args_3=
+
 The "kioskmode" can be set to "1" to stop the menu quitting.
 
 CHANGE LOG
 ----------
+
+September 2015:
+
+  * DPAD can be defined as buttons.
 
 February 18, 2015:
 
