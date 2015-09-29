@@ -243,6 +243,11 @@ void pi_initialise()
 
     //Configure joysticks from config file or defaults
     pi_joy[A_1] = get_integer_conf("Joystick", "A_1", RPI_JOY_A);
+    pi_joy[LEFT_1] = get_integer_conf("Joystick", "LEFT_1", RPI_JOY_LEFT);
+    pi_joy[RIGHT_1] = get_integer_conf("Joystick", "RIGHT_1", RPI_JOY_RIGHT);
+    pi_joy[UP_1] = get_integer_conf("Joystick", "UP_1", RPI_JOY_UP);
+    pi_joy[DOWN_1] = get_integer_conf("Joystick", "DOWN_1", RPI_JOY_DOWN);
+
     pi_joy[START_1] = get_integer_conf("Joystick", "START_1", RPI_JOY_START);
     pi_joy[SELECT_1] = get_integer_conf("Joystick", "SELECT_1", RPI_JOY_SELECT);
 
@@ -500,6 +505,12 @@ unsigned long pi_joystick_read(void)
 	if (joy_axes[0][joyaxis_UD] == DOWN)       val |= GP2X_DOWN;
 	if (joy_axes[0][joyaxis_LR] == LEFT)       val |= GP2X_LEFT;
 	if (joy_axes[0][joyaxis_LR] == RIGHT)      val |= GP2X_RIGHT;
+
+        // DPAD special buttons
+    if (joy_buttons[0][pi_joy[LEFT_1]])   val |= GP2X_LEFT;
+    if (joy_buttons[0][pi_joy[RIGHT_1]])  val |= GP2X_RIGHT;
+    if (joy_buttons[0][pi_joy[UP_1]])     val |= GP2X_UP;
+    if (joy_buttons[0][pi_joy[DOWN_1]])   val |= GP2X_DOWN;
 
     if(sdl_keys)
     {

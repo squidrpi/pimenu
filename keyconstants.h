@@ -30,17 +30,21 @@ enum {
 #define RPI_KEY_DOWN    SDLK_DOWN
 #define RPI_KEY_QUIT    SDLK_ESCAPE
 
-#define RPI_JOY_A       3
-#define RPI_JOY_START   9
-#define RPI_JOY_SELECT  8
+#define RPI_JOY_A       1
+#define RPI_JOY_START   7
+#define RPI_JOY_SELECT  6
 #define RPI_JOY_QUIT    5
+#define RPI_JOY_LEFT    11
+#define RPI_JOY_RIGHT   12
+#define RPI_JOY_UP      13
+#define RPI_JOY_DOWN    14
 
-#define A_1 0
+#define A_1     0
 #define START_1 12
 #define SELECT_1 13
-#define UP_1 16
-#define DOWN_1 17
-#define LEFT_1 18
+#define UP_1    16
+#define DOWN_1  17
+#define LEFT_1  18
 #define RIGHT_1 19
 
 #define QUIT 51
