@@ -45,8 +45,8 @@ background. The following ImageMagick command creates the correct format:
 
 You can run bash scripts, example here to poweroff the Pi:
 
-icon_command_3=sudo /sbin/reboot
-icon_args_3=
+    icon_command_3=sudo /sbin/reboot
+    icon_args_3=
 
 The "kioskmode" can be set to "1" to stop the menu quitting.
 
