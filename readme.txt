@@ -44,6 +44,7 @@ background. The following ImageMagick command creates the correct format:
     convert ICON.png -resize 192x192 -compress none bmp3:ICON3.bmp
 
 You can run bash scripts, example here to poweroff the Pi:
+
 icon_command_3=sudo /sbin/reboot
 icon_args_3=
 
