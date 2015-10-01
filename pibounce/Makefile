@@ -13,9 +13,10 @@ SDL_FLAGS=-I/usr/include/SDL -I/usr/include/glib-2.0 -I/usr/lib/arm-linux-gnueab
     -I/opt/vc/include/interface/vmcs_host/linux
 SDL_LIBS=-lSDL -lm -ldl -lglib-2.0
 
-CFLAGS = $(SDL_FLAGS) -O2 -funroll-loops -Wextra -Werror
+#CFLAGS = $(SDL_FLAGS) -O2 -funroll-loops -Wextra -Werror
+CFLAGS = $(SDL_FLAGS) -g -funroll-loops -Wextra -Werror
 CXXFLAGS = $(SDL_FLAGS) -O2 -funroll-loops -Wall
-LIBS = $(SDL_LIBS)  -L/opt/vc/lib -lbcm_host -lGLESv2
+LIBS = $(SDL_LIBS)  -L/opt/vc/lib -lbcm_host -lGLESv2 -lpng
 
 TARGET = $(PROG_NAME)
 
@@ -23,7 +24,7 @@ all : $(TARGET)
 
 $(TARGET) : $(OBJS)
 	$(CXX) $(LDFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
-	$(STRIP) $(TARGET)
+#	$(STRIP) $(TARGET)
 
 clean:
 	/bin/rm -rf *~ *.o $(TARGET)
