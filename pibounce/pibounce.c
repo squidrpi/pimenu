@@ -212,7 +212,7 @@ static void dispmanx_init(void)
 
     //Load PNGs which have alpha channel and are 192x192 in size
     //Must free PNG after we've copied it
-    loadPNG(&image, "./ICON.png");
+    loadPNG(&image, "./ICON0.png");
 
 	//Write the PNG bitmap to the dispmanx resources (surfaces)
     vc_dispmanx_rect_set( &dst_rect, 0, 0, 192, 192 );
