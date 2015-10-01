@@ -1,4 +1,4 @@
 rm pimenu.zip
 cp pimenu.cfg.template pimenu.cfg
-zip pimenu.zip pimenu pimenu.cfg ICON[01234].bmp readme.txt ICONfba.bmp ICONpower.bmp ICONsnes.bmp ICONatari.bmp ICONmame.bmp ICONscummvm.bmp ICONspectrum.bmp
+zip pimenu.zip pimenu pimenu.cfg ICON[01234].png readme.txt ICONfba.png ICONpower.png ICONsnes.png ICONatari.png ICONmame.png ICONscummvm.png ICONspectrum.png
 
