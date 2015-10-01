@@ -21,9 +21,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-//#include <time.h>
 #include <SDL.h>
 #include <glib.h>
+#include <png.h>
 #include <bcm_host.h>
 
 #include "pimenu.h"
@@ -31,16 +31,24 @@
 
 SDL_Event event;
 
-#define MAXICONS 10
+#define MAXICONS 20
+#define PNGSIZE 384
 
-SDL_Surface *icon[MAXICONS];
-SDL_Surface *tmp_icon;
+typedef struct IMAGE_T_
+{
+    int32_t width;
+    int32_t height;
+    int32_t pitch;
+    uint16_t bitsPerPixel;
+    uint32_t size;
+    void *buffer;
+} IMAGE_T;
+
+IMAGE_T image;
 
 //Actual number icons being displayed
 int num_icons=0;
 
-int i;
-unsigned int ii;
 char g_string[255];
 
 unsigned char joy_buttons[2][32];
@@ -50,7 +58,6 @@ int joyaxis_LR, joyaxis_UD;
 
 unsigned char *sdl_keys;
 
-static unsigned long fe_timer_read(void);
 static void fe_ProcessEvents (void);
 unsigned long pi_joystick_read(void);
 
@@ -58,6 +65,8 @@ static void dispmanx_init(void);
 static void dispmanx_deinit(void);
 static void dispmanx_display(void);
 static void initSDL(void);
+int loadPNG(IMAGE_T* image, const char *file, int sizex, int sizey);
+void freePNG(IMAGE_T* image);
 
 #define NUMKEYS 256
 static Uint16 pi_key[NUMKEYS];
@@ -67,8 +76,8 @@ int icon_x=0;
 
 int posx_diff;
 int posy=0;
-int iconsize=192;
-int	scalesize=0;
+int iconsize=PNGSIZE;
+float scalesize=0;  //scale ICONs on screen based on display size
 
 int current_icon=0;
 int current_icon_pos=0;
@@ -149,42 +158,30 @@ int exit_prog(void)
 
 void init_title(void)
 {
-	FILE *fp;
-	unsigned char filename[255];
-	int i;
+    FILE *fp;
+    unsigned char filename[65535];
+    int i;
 
-	//Scan all the icon commands configured in the cfg file and check to 
+    //Scan all the icon commands configured in the cfg file and check to 
     //see if they actually exist. Also check the icons exist, otherwise
-	//simple skip them alltogether.
-	for(i=0;i<options.icon_count;i++) {
+    //simple skip them alltogether.
+    for(i=0;i<options.icon_count;i++) {
 
-		if ((fp = fopen( tmp_icon_commands[i] , "r")) == NULL) {
-			continue;
-		}
+        if ((fp = fopen( tmp_icon_commands[i] , "r")) == NULL) {
+          continue;
+        }
 
-		//Check icon image exists
-		sprintf(filename, "./ICON%d.bmp", i);	
-		if ((fp = fopen( filename , "r")) != NULL) {
+        //Check icon images exists, otherwise skip it
+        sprintf(filename, "./ICON%d.png", i);    
+        if ((fp = fopen( filename , "r")) != NULL) {
+            fclose(fp);
 
-			tmp_icon = SDL_LoadBMP( filename );
-			fclose(fp);
-			//Validate read as sometimes gives errors!
-			if(tmp_icon->w != 192 || tmp_icon == NULL) {
-				printf("\n\n\n     ERROR: ICON %d read error!\n",i);
-				exit_prog();
-			}
-			//Convert image to 16bit 565 ready for dispmanx Surface
-			icon[num_icons] = SDL_CreateRGBSurface(SDL_SWSURFACE, tmp_icon->w, tmp_icon->h, 16, 0xf800, 0x07e0, 0x001f, 0x0000);
-			SDL_BlitSurface(tmp_icon, NULL,  icon[num_icons], NULL);
-			SDL_FreeSurface(tmp_icon);
+            strcpy(icon_commands[num_icons], tmp_icon_commands[i]);
+            strcpy(icon_args[num_icons], tmp_icon_args[i]);
 
-			strcpy(icon_commands[num_icons], tmp_icon_commands[i]);
-			strcpy(icon_args[num_icons], tmp_icon_args[i]);
-
-			num_icons++;
-
-		}
-	}
+            num_icons++;
+        }
+    }
 }
 
 void ss_prog_run(void)
@@ -259,25 +256,25 @@ void pi_initialise()
 
 	options.kiosk_mode = get_integer_conf("General", "kioskmode", 0);	
 
-	//Read icon info from config file
-	options.icon_count = get_integer_conf("General", "icon_count", 0);	
-	if (options.icon_count == 0) {
-		printf("Configuration is incorrect, no icons!\n");
-		exit_prog();
-	}
-	for(i=0;i<options.icon_count;i++) {
+    //Read command list
+	options.icon_count = 0;
+	for(i=0;i<MAXICONS;i++) {
 		char tmpstr[50], *tempptr;
 		sprintf(tmpstr, "icon_command_%d", i);
 		tempptr = get_string_conf("General", tmpstr);
 		strcpy(tmp_icon_commands[i], "");
-		if(tempptr)
+		if(tempptr) 
 			strcpy(tmp_icon_commands[i], tempptr);
+        else 
+            continue;
 
 		sprintf(tmpstr, "icon_args_%d", i);
 		tempptr = get_string_conf("General", tmpstr);
 		strcpy(tmp_icon_args[i], "");
 		if(tempptr)
 			strcpy(tmp_icon_args[i], tempptr);
+
+        options.icon_count++;
 	}
 		
     close_config_file();
@@ -287,8 +284,6 @@ void pi_initialise()
 
 int main(int argc, char *argv[])
 {
-//    sleep(20);
-    
 	int Quit,ErrorQuit ;
 	//int Write = 0;
 	unsigned int zipnum;
@@ -309,7 +304,7 @@ int main(int argc, char *argv[])
 	{
 
 		num_icons=0;
-		posx_diff=192+32;
+		posx_diff=PNGSIZE+32;
 
 		pi_initialise();
 
@@ -331,14 +326,16 @@ int main(int argc, char *argv[])
 		    //icon positions
 			if(next_icon != current_icon) {
 				if(next_icon > current_icon) {
-					current_icon_pos-=8*scalesize;
+					//current_icon_pos-=8*scalesize;
+					current_icon_pos-=16*scalesize;
 					if(current_icon_pos <= -(posx_diff)) {
 						current_icon = next_icon;
 						current_icon_pos = 0;
 					}
 				}
 				if(next_icon < current_icon) {
-					current_icon_pos+=8*scalesize;
+					//current_icon_pos+=8*scalesize;
+					current_icon_pos+=16*scalesize;
 					if(current_icon_pos >= posx_diff) {
 						current_icon = next_icon;
 						current_icon_pos = 0;
@@ -411,14 +408,6 @@ int main(int argc, char *argv[])
 	}
 
 	return 0;
-}
-
-static unsigned long fe_timer_read(void)
-{
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC_RAW, &now);
-    
-    return ((unsigned long long)now.tv_sec * 1000000LL + (now.tv_nsec / 1000LL));
 }
 
 static void fe_ProcessEvents (void)
@@ -532,6 +521,8 @@ DISPMANX_UPDATE_HANDLE_T dx_update;
 
 DISPMANX_RESOURCE_HANDLE_T dx_resource_bg;
 DISPMANX_ELEMENT_HANDLE_T dx_element_bg;
+DISPMANX_RESOURCE_HANDLE_T dx_resource_bg2;
+DISPMANX_ELEMENT_HANDLE_T dx_element_bg2;
 
 DISPMANX_RESOURCE_HANDLE_T dx_icon[MAXICONS];
 DISPMANX_ELEMENT_HANDLE_T dx_element[MAXICONS];
@@ -560,22 +551,17 @@ static void dispmanx_init(void)
     int ret;
 	int i;
     uint32_t crap;
+    unsigned char filename[65535];
     VC_RECT_T dst_rect;
     VC_RECT_T src_rect;
-
-	//Dispmanx default lets black become transparent! This switches that off.
-	VC_DISPMANX_ALPHA_T alpha;
-	alpha.flags = DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS;
-	alpha.opacity = 0xFF;
-	alpha.mask = 0; 
 
     bcm_host_init();
 
     graphics_get_display_size(0 /* LCD */, &display_width, &display_height);
 
 	//Screen is based on a 480 height screen, scale up for anything else
-	scalesize = (display_height/480);
-	iconsize = 192*scalesize;
+	scalesize = (float)(display_height/480) * (float) 0.75;
+	iconsize = PNGSIZE*scalesize;
 	posx_diff = posx_diff*scalesize;
 
 	//Find vertical centre and centre for an icon
@@ -588,48 +574,72 @@ static void dispmanx_init(void)
 
     dx_display = vc_dispmanx_display_open( 0 );
 
-	//Write the SDL surface bitmaps to the dispmanx resources (surfaces) and free the SDL surface
-    vc_dispmanx_rect_set( &dst_rect, 0, 0, 192, 192 );
+	//Read the PNG files and write to the dispmanx resources (surfaces)
+    vc_dispmanx_rect_set( &dst_rect, 0, 0, PNGSIZE, PNGSIZE );
 	for(i=0;i<num_icons;i++) {
-    	dx_icon[i] = vc_dispmanx_resource_create(VC_IMAGE_RGB565, 192, 192, &crap);
-		SDL_LockSurface(icon[i]);
-    	vc_dispmanx_resource_write_data( dx_icon[i], VC_IMAGE_RGB565, icon[i]->pitch, icon[i]->pixels, &dst_rect );
-		SDL_UnlockSurface(icon[i]);
-		SDL_FreeSurface(icon[i]);
+        sprintf(filename, "./ICON%d.png", i);
+        if(!loadPNG(&image, filename, PNGSIZE, PNGSIZE)) {
+            printf("\n\n\n ERROR: ICON %d read error!\n",i);
+            exit_prog();
+        }
+        dx_icon[i] = vc_dispmanx_resource_create(VC_IMAGE_RGBA32, PNGSIZE, PNGSIZE, &crap);
+        vc_dispmanx_resource_write_data( dx_icon[i], VC_IMAGE_RGBA32, image.pitch, image.buffer, &dst_rect );
+        freePNG(&image);
 	}
 
-    vc_dispmanx_rect_set( &src_rect, 0, 0, 192 << 16, 192 << 16);
+    vc_dispmanx_rect_set( &src_rect, 0, 0, PNGSIZE << 16, PNGSIZE << 16);
 
     dx_update = vc_dispmanx_update_start( 0 );
+
+    //PNGs use alpha for mask
+    VC_DISPMANX_ALPHA_T alpha = { DISPMANX_FLAGS_ALPHA_FROM_SOURCE, 255, 0 };
 
     // draw icons to screen
 	for(i=0;i<num_icons;i++) {
 		vc_dispmanx_rect_set( &dst_rect, icon_posx[i], posy, 1, 1);
     	dx_element[i] = vc_dispmanx_element_add(  dx_update,
-							dx_display, 2, &dst_rect, dx_icon[i], &src_rect,
+							dx_display, 10, &dst_rect, dx_icon[i], &src_rect,
 							DISPMANX_PROTECTION_NONE, &alpha, 0, (DISPMANX_TRANSFORM_T) 0 );
 	}
 
+///////////////////////
+//    //Background image to cover whole screen
+//#define SCRX 1024
+//#define SCRY 768
+//    dx_resource_bg2 = vc_dispmanx_resource_create(VC_IMAGE_RGBA32, SCRX, SCRY, &crap);
+//
+//    vc_dispmanx_rect_set( &dst_rect, 0, 0, SCRX, SCRY );
+//    loadPNG(&image, "scr.png", SCRX, SCRY);
+//    vc_dispmanx_resource_write_data( dx_resource_bg2, VC_IMAGE_RGBA32, image.pitch, image.buffer, &dst_rect );
+//    freePNG(&image);
+//
+//    vc_dispmanx_rect_set( &src_rect, 0, 0, SCRX<< 16, SCRY<<16);
+//    vc_dispmanx_rect_set( &dst_rect, 0, 0, display_width, display_height );
+//    dx_element_bg2 = vc_dispmanx_element_add(  dx_update, dx_display, 5,
+//                               &dst_rect, dx_resource_bg2, &src_rect,
+//                               DISPMANX_PROTECTION_NONE, 0, 0, (DISPMANX_TRANSFORM_T) 0 );
 
-	//White background layer to cover whole screen
-    dx_resource_bg = vc_dispmanx_resource_create(VC_IMAGE_RGB565, 128, 128, &crap);
 
-	//Just write white values to memory area
-	unsigned char *tmpbitmap=malloc(128*128*2);
-	memset(tmpbitmap, 255, 128*128*2); 
-	vc_dispmanx_rect_set( &dst_rect, 0, 0, 128, 128 );
-    vc_dispmanx_resource_write_data( dx_resource_bg, VC_IMAGE_RGB565, 128*2, tmpbitmap, &dst_rect );
+    //White background layer to cover whole screen
+    //Match element display resolution to avoid expensive stretching
+    dx_resource_bg = vc_dispmanx_resource_create(VC_IMAGE_RGB565, display_width, display_height, &crap);
 
-	vc_dispmanx_rect_set( &dst_rect, 0, 0, display_width, display_height );
-    vc_dispmanx_rect_set( &src_rect, 0, 0, 128 << 16, 128 << 16);
+    //Just write white values to memory area
+    unsigned char *tmpbitmap=malloc(display_width*display_height*2);
+    memset(tmpbitmap, 255, display_width*display_height*2);
+    vc_dispmanx_rect_set( &dst_rect, 0, 0, display_width, display_height );
+    vc_dispmanx_resource_write_data( dx_resource_bg, VC_IMAGE_RGB565, display_width*2, tmpbitmap, &dst_rect );
+    free(tmpbitmap);
+
+    vc_dispmanx_rect_set( &dst_rect, 0, 0, display_width, display_height );
+    vc_dispmanx_rect_set( &src_rect, 0, 0, display_width << 16, display_height << 16);
     dx_element_bg = vc_dispmanx_element_add(  dx_update, dx_display, 1,
                                           &dst_rect, dx_resource_bg, &src_rect,
                                           DISPMANX_PROTECTION_NONE, 0, 0, (DISPMANX_TRANSFORM_T) 0 );
 
+
 	//Update the display
     ret = vc_dispmanx_update_submit_sync( dx_update );
-
-	free(tmpbitmap);
 
 }
 
@@ -653,15 +663,7 @@ static void dispmanx_deinit(void)
 }
 
 
-#ifndef ELEMENT_CHANGE_LAYER
-/* copied from interface/vmcs_host/vc_vchi_dispmanx.h of userland.git */
-#define ELEMENT_CHANGE_LAYER          (1<<0)
-#define ELEMENT_CHANGE_OPACITY        (1<<1)
 #define ELEMENT_CHANGE_DEST_RECT      (1<<2)
-#define ELEMENT_CHANGE_SRC_RECT       (1<<3)
-#define ELEMENT_CHANGE_MASK_RESOURCE  (1<<4)
-#define ELEMENT_CHANGE_TRANSFORM      (1<<5)
-#endif
 
 static void dispmanx_display(void)
 {
@@ -679,17 +681,12 @@ static void dispmanx_display(void)
 		dst_x=icon_posx[i]+((iconsize-zoom)/2);
 		dst_y=posy+((iconsize-zoom)/2);
 
-		//If none of the icon is on the screen then shift off the right screen
-        //as dispmanx won't display it correctly when off the left completely.
-//		if(dst_x < -zoom){
-//  			dst_x = 3000;
-//		}
-
-		vc_dispmanx_rect_set( &src_rect, 0, 0, 192 << 16, 192 << 16);
+		vc_dispmanx_rect_set( &src_rect, 0, 0, PNGSIZE << 16, PNGSIZE << 16);
     	vc_dispmanx_rect_set( &dst_rect, dst_x, dst_y, zoom, zoom );
 
+        //If icon is not visible on left then move off right of screen
 		if(dst_x <= -zoom){
-    		vc_dispmanx_rect_set( &dst_rect, display_width+1, 0, 1, 1 );
+    		vc_dispmanx_rect_set( &dst_rect, display_width+1, 0, PNGSIZE, PNGSIZE );
 		}
 
     	rc = vc_dispmanx_element_change_attributes(
@@ -708,4 +705,89 @@ static void dispmanx_display(void)
 	if (zoom > iconsize) zoom = iconsize;
 
     vc_dispmanx_update_submit_sync( dx_update );
+}
+
+
+#ifndef ALIGN_TO_16
+#define ALIGN_TO_16(x) ((x + 15) & ~15)
+#endif
+
+int loadPNG(IMAGE_T* image, const char *file, int sizex, int sizey)
+{
+    int width, height;
+
+    FILE* fpin = fopen(file, "rb");
+
+    if (fpin == NULL)
+    {
+        fprintf(stderr, "loadPNG: can't open file %s\n",file);
+        return FALSE;
+    }
+
+    png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+
+    if (png_ptr == NULL) { return FALSE; }
+
+    png_infop info_ptr = png_create_info_struct(png_ptr);
+
+    if (info_ptr == NULL)
+    {
+        png_destroy_read_struct(&png_ptr, 0, 0);
+        return FALSE;
+    }
+
+    if (setjmp(png_jmpbuf(png_ptr)))
+    {
+        png_destroy_read_struct(&png_ptr, &info_ptr, 0);
+        return FALSE;
+    }
+
+    png_init_io(png_ptr, fpin);
+    png_read_info(png_ptr, info_ptr);
+
+    png_byte colour_type = png_get_color_type(png_ptr, info_ptr);
+    png_byte bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+
+    width =  png_get_image_width(png_ptr, info_ptr);
+    height = png_get_image_height(png_ptr, info_ptr);
+
+    image->width = width;
+    image->height =  height;
+    if (width != sizex || height != sizey)
+    {
+        fprintf(stderr, "ERROR: PNG wrong size\n");
+        exit_prog();
+    }
+
+    image->pitch = (ALIGN_TO_16(width) * 32) / 8;
+    image->size = image->pitch * ALIGN_TO_16(height);
+    image->buffer = calloc(1, image->size);
+
+    if (image->buffer == NULL)
+    {
+        fprintf(stderr, "ERROR: memory exhausted\n");
+        exit_prog();
+    }
+
+    png_read_update_info(png_ptr, info_ptr);
+    png_bytepp row_pointers = malloc(image->height * sizeof(png_bytep));
+
+    png_uint_32 j = 0;
+    for (j = 0 ; j < (png_uint_32) image->height ; ++j)
+    {
+        row_pointers[j] = image->buffer + (j * image->pitch);
+    }
+
+    png_read_image(png_ptr, row_pointers);
+
+    fclose(fpin);
+    free(row_pointers);
+    png_destroy_read_struct(&png_ptr, &info_ptr, 0);
+
+    return TRUE;
+}
+
+void freePNG(IMAGE_T* image)
+{
+    free (image->buffer);
 }
