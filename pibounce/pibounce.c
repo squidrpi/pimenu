@@ -14,8 +14,6 @@
 
 SDL_Event event;
 
-#define MAXICONS 30
-
 typedef struct IMAGE_T_
 {
     int32_t width;
@@ -29,7 +27,10 @@ typedef struct IMAGE_T_
 IMAGE_T image;
 
 //Actual number icons being displayed
-int num_icons=22;
+int num_icons=24;
+int num_images=0;
+int current_image=0;
+int next_image=0;
 
 unsigned char *sdl_keys;
 
@@ -45,6 +46,8 @@ void freePNG(IMAGE_T* image);
 
 #define NUMKEYS 256
 static Uint16 pi_key[NUMKEYS];
+static Uint16 pi_joy[NUMKEYS];
+
 
 int icon_x=0;
 
@@ -55,6 +58,8 @@ int current_icon=0;
 int current_icon_pos=0;
 int next_icon=0;
 
+#define MAXICONS 30
+
 int icon_posx[MAXICONS];
 int icon_posy[MAXICONS];
 int icon_diffx[MAXICONS];
@@ -63,12 +68,14 @@ int icon_diffy[MAXICONS];
 DISPMANX_DISPLAY_HANDLE_T dx_display;
 DISPMANX_UPDATE_HANDLE_T dx_update;
 
-DISPMANX_RESOURCE_HANDLE_T dx_icon[MAXICONS], dx_resource_bg;
+DISPMANX_RESOURCE_HANDLE_T dx_resource[MAXICONS], dx_resource_bg;
 DISPMANX_ELEMENT_HANDLE_T dx_element[MAXICONS], dx_element_bg;
 
 uint32_t display_width=0, display_height=0;
 
 Uint32 Joypads=0;
+unsigned char joy_buttons[2][32];
+int key_down=0;
 
 int exit_prog(void)
 {
@@ -82,9 +89,18 @@ int exit_prog(void)
 
 void pi_initialise()
 {
+
+    memset(joy_buttons, 0, 32*2);
+    memset(pi_key, 0, NUMKEYS*2);
+    memset(pi_joy, 0, NUMKEYS*2);
+
+    pi_joy[QUIT] = RPI_JOY_QUIT;
+    pi_joy[START_1] = RPI_JOY_START;
+
     memset(pi_key, 0, NUMKEYS*2);
 
 	pi_key[QUIT] = RPI_KEY_QUIT;
+    pi_key[START_1] = RPI_KEY_START;
 }
 
 
@@ -135,10 +151,20 @@ int main(int argc, char *argv[])
 	            
 	        usleep(10000);
 	        
-			if (Joypads & GP2X_SELECT || Joypads & GP2X_ESCAPE) {
+			if (Joypads & GP2X_ESCAPE) {
+                printf("\nquit\n");
 				exit_prog();
 	        	Quit=1;
 	       	}
+
+            if (Joypads & GP2X_START && !key_down) {
+                next_image++;
+                if(next_image >= num_images) next_image=0;
+
+                printf("\nnext %d\n",next_image);
+
+                key_down=1;
+            }
 		}
 	}
 
@@ -150,11 +176,20 @@ static void fe_ProcessEvents (void)
     SDL_Event event;
     while(SDL_PollEvent(&event)) {
         switch(event.type) {
+           case SDL_JOYBUTTONDOWN:
+                joy_buttons[event.jbutton.which][event.jbutton.button] = 1;
+                break;
+            case SDL_JOYBUTTONUP:
+                joy_buttons[event.jbutton.which][event.jbutton.button] = 0;
+                key_down=0;
+                break;
+
             case SDL_KEYDOWN:
                 sdl_keys = SDL_GetKeyState(NULL);
                 break;
             case SDL_KEYUP:
                 sdl_keys = SDL_GetKeyState(NULL);
+                key_down=0;
                 break;
         }
     }
@@ -165,9 +200,15 @@ unsigned long pi_joystick_read(void)
 {
     unsigned long val=0;
 
+    if (joy_buttons[0][pi_joy[QUIT]])  val |= GP2X_ESCAPE;
+
+    if (joy_buttons[0][pi_joy[START_1]])  val |= GP2X_START;
+
+
     if(sdl_keys)
     {
         if (sdl_keys[pi_key[QUIT]] == SDL_PRESSED)      val |= GP2X_ESCAPE;
+        if (sdl_keys[pi_key[START_1]] == SDL_PRESSED)   val |= GP2X_START;
     }
 
     return(val);
@@ -212,16 +253,21 @@ static void dispmanx_init(void)
 
     //Load PNGs which have alpha channel and are 192x192 in size
     //Must free PNG after we've copied it
-    loadPNG(&image, "./ICON0.png");
 
 	//Write the PNG bitmap to the dispmanx resources (surfaces)
     vc_dispmanx_rect_set( &dst_rect, 0, 0, 192, 192 );
-	for(i=0;i<num_icons;i++) {
-    	dx_icon[i] = vc_dispmanx_resource_create(VC_IMAGE_RGBA32, 192, 192, &vc_image_ptr);
-    	vc_dispmanx_resource_write_data( dx_icon[i], VC_IMAGE_RGBA32, image.pitch, image.buffer, &dst_rect );
-	}
+	for(i=0;i<MAXICONS;i++) {
+        char filename[255];
 
-    freePNG(&image);
+        sprintf(filename, "./ICON%d.png", i);
+        if(!loadPNG(&image, filename)) break;
+
+    	dx_resource[i] = vc_dispmanx_resource_create(VC_IMAGE_RGBA32, 192, 192, &vc_image_ptr);
+    	vc_dispmanx_resource_write_data( dx_resource[i], VC_IMAGE_RGBA32, image.pitch, image.buffer, &dst_rect );
+        freePNG(&image);
+
+        num_images++;
+	}
 
     dx_update = vc_dispmanx_update_start( 0 );
 
@@ -235,7 +281,7 @@ static void dispmanx_init(void)
 	for(i=0;i<num_icons;i++) {
 		vc_dispmanx_rect_set( &dst_rect, icon_posx[i], icon_posy[i], iconsize, iconsize);
     	dx_element[i] = vc_dispmanx_element_add( dx_update,
-				dx_display, 2+i, &dst_rect, dx_icon[i], &src_rect,
+				dx_display, 2+i, &dst_rect, dx_resource[current_image], &src_rect,
 				DISPMANX_PROTECTION_NONE, &alpha, 0, (DISPMANX_TRANSFORM_T) 0 );
 	}
 
@@ -272,7 +318,7 @@ static void dispmanx_deinit(void)
     ret = vc_dispmanx_update_submit_sync( dx_update );
     ret = vc_dispmanx_resource_delete( dx_resource_bg );
 	for(i=0;i<num_icons;i++) {
-    	ret = vc_dispmanx_resource_delete( dx_icon[i] );
+    	ret = vc_dispmanx_resource_delete( dx_resource[num_images] );
 	}
     ret = vc_dispmanx_display_close( dx_display );
 
@@ -306,7 +352,14 @@ static void dispmanx_display(void)
                 &src_rect, 
                 0, 
                 (DISPMANX_TRANSFORM_T) 0 );
+
+        if(current_image != next_image) {
+           vc_dispmanx_element_change_source( dx_update, dx_element[i], dx_resource[next_image] );
+        }
+    
 	}
+
+    current_image = next_image;
 
     vc_dispmanx_update_submit_sync( dx_update );
 
@@ -325,7 +378,6 @@ int loadPNG(IMAGE_T* image, const char *file)
 
     if (fpin == NULL)
     {
-        fprintf(stderr, "loadPNG: can't open file %s\n",file);
         return FALSE;
     }
 

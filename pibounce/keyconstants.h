@@ -30,10 +30,10 @@ enum {
 #define RPI_KEY_DOWN    SDLK_DOWN
 #define RPI_KEY_QUIT    SDLK_ESCAPE
 
-#define RPI_JOY_A       3
-#define RPI_JOY_START   9
-#define RPI_JOY_SELECT  8
-#define RPI_JOY_QUIT    5
+#define RPI_JOY_A       0
+#define RPI_JOY_SELECT  6
+#define RPI_JOY_START   7
+#define RPI_JOY_QUIT    8
 
 #define A_1 0
 #define START_1 12
