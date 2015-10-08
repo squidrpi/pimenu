@@ -27,10 +27,11 @@ typedef struct IMAGE_T_
 IMAGE_T image;
 
 //Actual number icons being displayed
-int num_icons=24;
+int num_icons=14;
 int num_images=0;
 int current_image=0;
 int next_image=0;
+
 
 unsigned char *sdl_keys;
 
@@ -51,8 +52,9 @@ static Uint16 pi_joy[NUMKEYS];
 
 int icon_x=0;
 
-int iconsize=192;
-int	scalesize=1;
+#define PNGSIZE 384
+
+int iconsize=PNGSIZE;
 
 int current_icon=0;
 int current_icon_pos=0;
@@ -152,7 +154,6 @@ int main(int argc, char *argv[])
 	        usleep(10000);
 	        
 			if (Joypads & GP2X_ESCAPE) {
-                printf("\nquit\n");
 				exit_prog();
 	        	Quit=1;
 	       	}
@@ -160,8 +161,6 @@ int main(int argc, char *argv[])
             if (Joypads & GP2X_START && !key_down) {
                 next_image++;
                 if(next_image >= num_images) next_image=0;
-
-                printf("\nnext %d\n",next_image);
 
                 key_down=1;
             }
@@ -245,24 +244,24 @@ static void dispmanx_init(void)
 
     graphics_get_display_size(0 /* LCD */, &display_width, &display_height);
 
-	//Screen is based on a 480 height screen, scale up for anything else
-//	scalesize = (display_height/480);
-	iconsize = 192*scalesize;
+    if (display_height < 1080) {
+        iconsize = (float) PNGSIZE * (float)((float)display_height/(float)1080);
+    }
 
     dx_display = vc_dispmanx_display_open( 0 );
 
-    //Load PNGs which have alpha channel and are 192x192 in size
+    //Load PNGs which have alpha channel and are PNGSIZExPNGSIZE in size
     //Must free PNG after we've copied it
 
 	//Write the PNG bitmap to the dispmanx resources (surfaces)
-    vc_dispmanx_rect_set( &dst_rect, 0, 0, 192, 192 );
+    vc_dispmanx_rect_set( &dst_rect, 0, 0, PNGSIZE, PNGSIZE );
 	for(i=0;i<MAXICONS;i++) {
         char filename[255];
 
         sprintf(filename, "./ICON%d.png", i);
         if(!loadPNG(&image, filename)) break;
 
-    	dx_resource[i] = vc_dispmanx_resource_create(VC_IMAGE_RGBA32, 192, 192, &vc_image_ptr);
+    	dx_resource[i] = vc_dispmanx_resource_create(VC_IMAGE_RGBA32, PNGSIZE, PNGSIZE, &vc_image_ptr);
     	vc_dispmanx_resource_write_data( dx_resource[i], VC_IMAGE_RGBA32, image.pitch, image.buffer, &dst_rect );
         freePNG(&image);
 
@@ -274,8 +273,7 @@ static void dispmanx_init(void)
     //PNGs use alpha for mask
     VC_DISPMANX_ALPHA_T alpha = { DISPMANX_FLAGS_ALPHA_FROM_SOURCE, 255, 0 };
 
-    vc_dispmanx_rect_set( &src_rect, 0, 0, 192 << 16, 192 << 16);
-    vc_dispmanx_rect_set( &dst_rect, 0, 0, 192, 192 );
+    vc_dispmanx_rect_set( &src_rect, 0, 0, PNGSIZE << 16, PNGSIZE << 16);
 
     // draw icons to screen
 	for(i=0;i<num_icons;i++) {
@@ -338,7 +336,7 @@ static void dispmanx_display(void)
     dx_update = vc_dispmanx_update_start( 0 );
 
 	//Move the icons if required
-	vc_dispmanx_rect_set( &src_rect, 0, 0, 192 << 16, 192 << 16);
+	vc_dispmanx_rect_set( &src_rect, 0, 0, PNGSIZE << 16, PNGSIZE << 16);
 
 	for(i=0;i<num_icons;i++) {
     	vc_dispmanx_rect_set( &dst_rect, icon_posx[i], icon_posy[i], iconsize, iconsize );
