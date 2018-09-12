@@ -15,7 +15,7 @@ SDL_LIBS=-lSDL -lm -ldl -lglib-2.0
 
 CFLAGS = $(SDL_FLAGS) -O2 -funroll-loops -Wextra -Werror
 CXXFLAGS = $(SDL_FLAGS) -O2 -funroll-loops -Wall
-LIBS = $(SDL_LIBS)  -L/opt/vc/lib -lbcm_host -lGLESv2 -lpng
+LIBS = $(SDL_LIBS)  -L/opt/vc/lib -lbcm_host -lbrcmGLESv2 -lpng
 
 TARGET = $(PROG_NAME)
 
